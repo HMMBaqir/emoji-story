@@ -10,7 +10,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import sessionmaker, Session
 from pydantic import BaseModel
 
-from .translation_service import convert_emojis_to_text
+from translationService import convert_emojis_to_text
 app = FastAPI()
 
 # Database setup
@@ -50,7 +50,6 @@ def get_db():
 
 class StoryCreate(BaseModel):
     emojiSequence: str
-    translation: str
     authorNickname: str
     likes: int = 0
     createdAt: datetime = None
@@ -63,8 +62,16 @@ class StoryResponse(BaseModel):
     likes: int
     createdAt: datetime
 
+class TranslationCreate(BaseModel):
+    storyId: int
+    emojiSequence: str
+class TranslationResponse(BaseModel):
+    id: int
+    storyId: int
+    translation: str
+    votes: int
 
-    
+
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
@@ -96,11 +103,10 @@ async def read_story(story_id: int, db: Session = Depends(get_db)):
     return db_story
 
 
-@app.post("/translations")
-async def create_translation(story: EmojiStory, db: Session = Depends(get_db)):
-    emojiSequence = story.emojiSequence
+@app.post("/translations/")
+async def create_translation(storyId: int, emojiSequence: str, db: Session = Depends(get_db)):
     translation = convert_emojis_to_text(emojiSequence)
-    db_translation = Translation(storyId=story.id, translation=translation, votes=0)
+    db_translation = Translation(storyId=storyId, translation=translation, votes=0)
     db.add(db_translation)
     db.commit()
     db.refresh(db_translation)
